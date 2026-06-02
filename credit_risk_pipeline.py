@@ -1,27 +1,4 @@
-import nbformat as nbf
-import os
 
-nb = nbf.v4.new_notebook()
-
-cells = []
-
-# Cell 1: Business Context
-cells.append(nbf.v4.new_markdown_cell("""
-# Credit Risk Default Prediction: A Cost-Sensitive Business Approach
-
-## 1. Business Context
-In credit risk modeling, the traditional approach of optimizing for standard metrics like accuracy and using a default decision threshold of 0.5 often fails to capture the true business impact. 
-
-For a retail bank, the cost of making a mistake is highly asymmetric:
-- **Cost of a False Negative (FN)**: Missing a default costs **£25,000** (principal write-off, collections).
-- **Cost of a False Positive (FP)**: Wrongly rejecting a good customer costs **£2,500** (lost lifetime value).
-
-This creates a **10:1 cost ratio**. Missing a default is 10 times worse than a false alarm. 
-This notebook builds an end-to-end ML pipeline that optimizes the decision threshold directly for minimum business cost.
-"""))
-
-# Cell 2: Setup
-cells.append(nbf.v4.new_code_cell("""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,15 +18,9 @@ sns.set_theme(style="whitegrid")
 # Ensure outputs directory exists
 import os
 os.makedirs('../outputs/figures', exist_ok=True)
-"""))
 
-# Cell 3: Data Loading
-cells.append(nbf.v4.new_markdown_cell("""
-## 2. Data Loading
-We fetch the **Default of Credit Card Clients** dataset (UCI ID 350) containing 30,000 samples and 23 features.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 # Fetch dataset
 dataset = fetch_ucirepo(id=350)
 X_raw = dataset.data.features.copy()
@@ -70,15 +41,9 @@ y.columns = ['default']
 # Display basic info
 print(f"Data shape: {X_raw.shape}")
 display(X_raw.head())
-"""))
 
-# Cell 4: EDA
-cells.append(nbf.v4.new_markdown_cell("""
-## 3. Exploratory Data Analysis (EDA)
-Understanding the class imbalance and feature distributions.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 # Target Distribution
 plt.figure(figsize=(6, 4))
 sns.countplot(x='default', data=y)
@@ -90,15 +55,9 @@ plt.show()
 
 default_rate = y['default'].mean()
 print(f"Base Default Rate: {default_rate:.2%}")
-"""))
 
-# Cell 5: Feature Engineering
-cells.append(nbf.v4.new_markdown_cell("""
-## 4. Preprocessing & Feature Engineering
-We clean undocumented categories and engineer business-relevant features to capture payment behavior trends.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 def engineer_features(X_df):
     X = X_df.copy()
     
@@ -139,15 +98,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 print(f"Training set: {X_train.shape[0]} samples")
 print(f"Testing set: {X_test.shape[0]} samples")
-"""))
 
-# Cell 6: Model Training
-cells.append(nbf.v4.new_markdown_cell("""
-## 5. Model Training & Hyperparameter Tuning
-We use `imblearn`'s SMOTE inside a cross-validation pipeline to handle class imbalance without data leakage. We optimize an XGBoost classifier using Optuna.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 def objective(trial):
     params = {
         'n_estimators': trial.suggest_int('n_estimators', 100, 500),
@@ -200,20 +153,14 @@ best_pipeline.fit(X_train, y_train)
 y_proba = best_pipeline.predict_proba(X_test)[:, 1]
 y_pred_default = (y_proba >= 0.5).astype(int)
 
-print("\\nBaseline Evaluation (Threshold 0.5):")
+print("\nBaseline Evaluation (Threshold 0.5):")
 print(f"Test AUC: {roc_auc_score(y_test, y_proba):.4f}")
 print(classification_report(y_test, y_pred_default))
-"""))
 
-# Cell 7: Threshold Optimization
-cells.append(nbf.v4.new_markdown_cell("""
-## 6. Threshold Optimization (Cost-Sensitive)
-This is the core business logic. We evaluate thresholds from 0.01 to 0.99 to find the point that minimizes the total business cost based on our Cost Matrix.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
-COST_FN = 25000  # Cost of missing a default (£25,000)
-COST_FP = 2500   # Cost of wrongly flagging a good customer (£2,500)
+
+COST_FN = 25000  # Cost of missing a default (Â£25,000)
+COST_FP = 2500   # Cost of wrongly flagging a good customer (Â£2,500)
 
 thresholds = np.linspace(0.01, 0.99, 99)
 costs = []
@@ -236,7 +183,7 @@ plt.plot(thresholds, costs, lw=2)
 plt.axvline(optimal_threshold, color='red', linestyle='--', label=f'Optimal Threshold ({optimal_threshold:.2f})')
 plt.title('Business Cost vs. Decision Threshold')
 plt.xlabel('Probability Threshold')
-plt.ylabel('Total Cost (£)')
+plt.ylabel('Total Cost (Â£)')
 plt.legend()
 plt.savefig('../outputs/figures/cost_curve.png', bbox_inches='tight')
 plt.show()
@@ -246,13 +193,12 @@ cost_at_05 = costs[np.argmin(np.abs(thresholds - 0.5))]
 savings = cost_at_05 - min_cost
 
 print(f"Optimal Threshold: {optimal_threshold:.2f}")
-print(f"Cost at 0.5 Threshold: £{cost_at_05:,.2f}")
-print(f"Cost at Optimal Threshold: £{min_cost:,.2f}")
-print(f"Total Savings on Test Set: £{savings:,.2f}")
-"""))
+print(f"Cost at 0.5 Threshold: Â£{cost_at_05:,.2f}")
+print(f"Cost at Optimal Threshold: Â£{min_cost:,.2f}")
+print(f"Total Savings on Test Set: Â£{savings:,.2f}")
 
-# Cell 8: Comparison
-cells.append(nbf.v4.new_code_cell("""
+
+
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
 cm_default = confusion_matrix(y_test, (y_proba >= 0.5).astype(int))
@@ -270,15 +216,9 @@ axes[1].set_ylabel('Actual')
 
 plt.savefig('../outputs/figures/confusion_matrices.png', bbox_inches='tight')
 plt.show()
-"""))
 
-# Cell 9: SHAP
-cells.append(nbf.v4.new_markdown_cell("""
-## 7. Model Interpretability (SHAP)
-Explainability is crucial for regulatory compliance and trust. We use SHAP values to identify global risk factors and explain individual predictions.
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 xgb_model = best_pipeline.named_steps['xgb']
 explainer = shap.TreeExplainer(xgb_model)
 # Calculate SHAP values for a subset to save time
@@ -291,9 +231,9 @@ shap.plots.beeswarm(shap_values, show=False)
 plt.title('Global Feature Importance (SHAP Beeswarm)')
 plt.savefig('../outputs/figures/shap_beeswarm.png', bbox_inches='tight')
 plt.show()
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
+
 # Waterfall plot for a True Positive (Correctly identified default)
 preds_optimal = (y_proba >= optimal_threshold).astype(int)
 tp_indices = np.where((y_test == 1) & (preds_optimal == 1))[0]
@@ -309,14 +249,9 @@ if len(tp_indices) > 0:
     plt.title(f'SHAP Waterfall: True Positive (Index {sample_idx})')
     plt.savefig('../outputs/figures/shap_waterfall_tp.png', bbox_inches='tight')
     plt.show()
-"""))
 
-# Cell 10: Business Impact
-cells.append(nbf.v4.new_markdown_cell("""
-## 8. Business Impact Summary
-"""))
 
-cells.append(nbf.v4.new_code_cell("""
+
 tp_opt = cm_optimal[1, 1]
 tp_def = cm_default[1, 1]
 additional_defaults_caught = tp_opt - tp_def
@@ -324,11 +259,6 @@ percent_increase = (additional_defaults_caught / tp_def) * 100 if tp_def > 0 els
 
 print(f"By shifting the decision threshold from 0.50 to {optimal_threshold:.2f}:")
 print(f"- We catch {additional_defaults_caught} additional defaults in the test set ({percent_increase:.1f}% increase).")
-print(f"- We save the bank £{savings:,.2f} in preventable losses, even after accounting for the £2,500 cost of wrongly flagging some good customers.")
-"""))
+print(f"- We save the bank Â£{savings:,.2f} in preventable losses, even after accounting for the Â£2,500 cost of wrongly flagging some good customers.")
 
-nb.cells = cells
-with open('notebooks/credit_risk_analysis.ipynb', 'w', encoding='utf-8') as f:
-    nbf.write(nb, f)
 
-print("Notebook successfully generated at notebooks/credit_risk_analysis.ipynb")

@@ -1,91 +1,164 @@
-# Business-Impact Tabular Classification: Credit Risk Optimization
+# 💳 Credit Default Risk — Business-Impact Tabular Classification
 
-This repository contains an end-to-end machine learning pipeline that predicts credit card defaults. Unlike traditional data science projects that optimize for abstract metrics like Accuracy or AUC, this project is built entirely around **Business ROI and Cost-Sensitive Threshold Optimization**.
-
-By replacing the default `0.5` probability threshold with a mathematically derived optimal threshold (`0.23`), this model increases default detection by **72.8%** and demonstrates a net savings of **£5.96 Million** on a 6,000-customer test portfolio.
+> **XGBoost + Optuna + SHAP + Cost-Sensitive Threshold Optimisation. Shifting the decision threshold from 0.50 to 0.23 catches 72.8% more defaults and delivers a net saving of £5.96M on a 6,000-customer test portfolio.**
 
 ---
 
-## 1. Project Design & Architecture
+## Business Result
 
-The project was designed with strict commercial constraints to mirror real-world banking ML deployments:
-- **No Deep Learning:** The pipeline relies strictly on gradient boosting (XGBoost), which is the industry standard for tabular data due to its performance and explainability.
-- **Optimization Standard:** Hyperparameter tuning was conducted using `Optuna` to efficiently navigate the search space over 30 cross-validated trials.
-- **Imbalance Handling:** The target class (defaults) is inherently imbalanced (22%). To prevent data leakage, `imblearn`'s SMOTE algorithm was strictly encapsulated *inside* the cross-validation folds.
-- **Explainability First:** The model is not treated as a black box. `SHAP` (SHapley Additive exPlanations) is utilized to ensure regulatory compliance and provide exact feature-level reasoning for every prediction.
+By replacing the naive 0.5 probability threshold with a mathematically derived optimal threshold of **0.23**, the model transformed abstract ML accuracy into quantifiable financial outcome:
 
-## 2. Project Structure
+| | Default (0.50 threshold) | Optimised (0.23 threshold) | Change |
+|---|---|---|---|
+| Defaults caught | 741 | 1,281 | **+540** |
+| Detection rate | — | — | **+72.8%** |
+| Net financial saving | — | **£5,960,000** | vs. baseline |
 
-```text
-project_4_business_ml/
-├── data/
-│   └── raw/                          # Raw CSV files (credit_features.csv, credit_targets.csv)
-├── notebooks/
-│   └── credit_risk_analysis.ipynb    # Main pipeline containing EDA, Training, and SHAP
-├── outputs/
-│   ├── figures/                      # Generated visualization plots
-│   └── executive_summary.pdf         # Auto-generated 1-page PDF for business stakeholders
-├── requirements.txt                  # Python dependencies
-└── generate_pdf.py                   # Script to convert results into the executive summary
-```
+The £5.96M figure accounts for every false positive incurred at the lower threshold — the saving is real net of intervention cost.
 
-## 3. Dataset Description
+📄 **[Download Executive Summary PDF](outputs/executive_summary.pdf)** — 1-page briefing written for a non-technical risk committee.
 
-The project uses the **Default of Credit Card Clients Dataset** (UCI ML Repository ID: 350).
+---
 
-- **Samples:** 30,000 credit card clients in Taiwan (from April to September 2005).
-- **Features:** 23 independent variables including:
-  - **Demographics:** Age, Sex, Education, Marital Status.
-  - **Financial History:** Credit Limit (`LIMIT_BAL`).
-  - **Payment Behavior:** Repayment status for the last 6 months (`PAY_1` to `PAY_6`).
-  - **Billing & Payments:** Bill statement amounts and actual amount paid over the last 6 months.
-- **Target Variable:** `default` (1 = default next month, 0 = no default).
-- **Class Distribution:** ~22.1% defaults (highly imbalanced).
+## Cost Matrix
 
-Several business-relevant features were engineered from the raw data, such as `utilization_rate` (Bill Amount / Credit Limit), `avg_utilization`, and `payment_trend` (Trajectory of late payments).
+Traditional models optimise for accuracy or AUC and apply a 0.5 decision threshold. This treats every error as equally costly. In credit risk, that assumption is wrong by an order of magnitude:
 
-## 4. Tests and Analyses Carried Out
+| Error type | Business cost | Reasoning |
+|---|---|---|
+| False Negative (approve a defaulter) | **£25,000** | Principal loss + collections + legal fees |
+| False Positive (reject a good customer) | **£2,500** | Lost interest margin + lifetime value |
+| **Cost ratio** | **10:1** | Missing a default is 10× more expensive |
 
-### 4.1 Cost Matrix Definition
-The traditional `0.5` threshold assumes all errors are equally bad. We defined a custom asymmetric cost matrix:
-- **Cost of a False Negative (FN):** £25,000 (Approving a loan that defaults costs the principal, collections, and legal fees).
-- **Cost of a False Positive (FP):** £2,500 (Wrongly rejecting a good customer costs the bank the lost interest margin and lifetime value).
-- **Cost Ratio:** 10:1 (Missing a default is 10 times more expensive).
+---
 
-### 4.2 Threshold Optimization
-The model outputs a raw default probability. We computationally evaluated the total business cost (FN cost + FP cost) across every threshold from `0.01` to `0.99` to find the exact point that minimized financial loss.
+## Threshold Optimisation
+
+The model outputs a raw probability. The optimal decision threshold was found by evaluating total business cost (FN cost + FP cost) across every threshold from 0.01 to 0.99:
 
 ![Cost Curve](outputs/figures/cost_curve.png)
 
-### 4.3 SHAP Interpretability
-We performed global and local SHAP analyses to understand the model's decision-making process. The beeswarm plot identifies the highest overall risk drivers across the portfolio.
-
-![SHAP Beeswarm Plot](outputs/figures/shap_beeswarm.png)
+The minimum of this curve occurs at **0.23** — meaning a customer with even a 23% estimated default probability has a higher expected cost if approved than if rejected.
 
 ---
 
-## 5. Results & Inference
+## SHAP Interpretability
 
-### The Optimal Threshold
-By evaluating the cost curve, we computationally proved that the **Optimal Threshold is 0.23**. 
-If a customer has even a 23% probability of defaulting, the mathematical expected value dictates that the bank must intervene, due to the heavy £25,000 penalty of missing a default.
+The model is not a black box. SHAP (SHapley Additive Explanations) was used to provide exact feature-level attribution for every prediction — a requirement for regulatory compliance in real banking deployments.
 
-### Financial ROI
-Based on the 6,000-customer test set, shifting the decision threshold from the naive 0.50 to the optimal 0.23 yielded the following results:
-- **Defaults Caught:** 540 additional defaults were identified that the baseline model would have approved.
-- **Detection Increase:** A **72.8%** increase in default detection.
-- **Net Savings:** Even after accounting for the £2,500 penalty incurred for every additional False Positive, the model achieved a net savings of **£5,960,000** on the test set alone.
+![SHAP Beeswarm](outputs/figures/shap_beeswarm.png)
+
+**Top risk drivers identified:**
+
+1. **`PAY_1` (most recent payment delay)** — Two or more months of delinquency causes a massive spike in default probability. Early-stage payment behaviour is the strongest leading indicator in the dataset.
+2. **`LIMIT_BAL` (credit limit)** — Lower assigned credit limits correlate strongly with default, indicating the bank's baseline underwriting captures risk but the ML model extracts deeper non-linear patterns from the same signal.
+3. **`utilization_rate`** — Customers approaching their credit ceiling (bill amount near limit balance) push the model sharply toward a default prediction.
+
+---
+
+## Confusion Matrices: Default vs Optimised Threshold
 
 ![Confusion Matrices](outputs/figures/confusion_matrices.png)
 
-### SHAP Inferences
-Based on the SHAP analysis, the strongest predictors of default are:
-1. **`PAY_1` (Recent Payment Delay):** Customers who delayed their most recent payment by 2 or more months saw a massive spike in default probability. Early-stage delinquency is the most reliable leading indicator.
-2. **`LIMIT_BAL` (Credit Limit):** Lower assigned credit limits are strongly correlated with default, indicating that the bank's baseline underwriting rules capture risk, but the ML model extracts deeper non-linear patterns.
-3. **`utilization_rate`:** Customers who max out their available credit (Bill Amount nearing Limit Balance) push the model heavily toward a default prediction.
+---
 
-## 6. Strategic Recommendations for Deployment
+## Model Pipeline
 
-1. **Decouple Training from Decisioning:** The XGBoost model should output raw probabilities, while a separate business-logic layer applies the `0.23` threshold.
-2. **Dynamic Cost Matrices:** As interest rates or lifetime values change, the threshold should be dynamically recalculated without needing to retrain the underlying XGBoost model.
-3. **Soft Interventions:** Rather than an outright rejection for customers landing between the `0.23` and `0.50` probabilities, banks should implement "soft interventions" (e.g., lowering credit limits, offering balance transfers) to minimize the £2,500 False Positive penalty while mitigating the £25,000 default risk.
+```
+UCI Credit Default Dataset (30,000 clients, Taiwan 2005)
+        │
+        ▼
+┌──────────────────────────┐
+│  Feature Engineering     │  ← utilization_rate, avg_utilization,
+│                          │    payment_trend (6-month trajectory)
+└──────────────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│  Cross-Validated XGBoost │  ← SMOTE inside CV folds (no leakage)
+│  + Optuna (30 trials)    │    Optuna Bayesian hyperparameter search
+└──────────────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│  Cost Curve Optimisation │  ← Find threshold minimising £ total cost
+│  → threshold = 0.23      │
+└──────────────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│  SHAP Analysis           │  ← Global beeswarm + local waterfall
+│  (global + per-customer) │    per individual prediction
+└──────────────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│  Executive Summary PDF   │  ← Auto-generated 1-page business brief
+└──────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+| Tool | Purpose | Why |
+|---|---|---|
+| XGBoost | Classification model | Industry standard for tabular data; interpretable; no deep learning needed |
+| Optuna | Hyperparameter tuning | Bayesian optimisation over 30 cross-validated trials; beats random/grid search |
+| SMOTE (imblearn) | Class imbalance | Synthetic oversampling inside CV folds — prevents leakage into validation sets |
+| SHAP | Explainability | Exact attribution via Shapley values; regulatory-grade interpretability |
+| Pandas / NumPy | Data processing | — |
+| Matplotlib / Seaborn | Visualisation | — |
+
+---
+
+## Dataset
+
+**Default of Credit Card Clients** — UCI ML Repository (ID: 350)
+
+- 30,000 credit card clients in Taiwan, April–September 2005
+- 23 features: demographics, credit limit, 6-month payment history, bill amounts, actual payments
+- Target: binary default (next month)
+- Class distribution: 22.1% defaults (imbalanced)
+
+**Engineered features added:**
+- `utilization_rate` = bill amount / credit limit
+- `avg_utilization` = mean utilisation across 6 months
+- `payment_trend` = trajectory of repayment status (improving / worsening)
+
+---
+
+## How to Run
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the full analysis notebook
+jupyter notebook notebooks/credit_risk_analysis.ipynb
+
+# Regenerate the executive summary PDF
+python generate_pdf.py
+```
+
+---
+
+## Strategic Deployment Recommendations
+
+1. **Decouple training from decisioning.** The XGBoost model outputs raw probabilities. A separate business-logic layer applies the 0.23 threshold — allowing the threshold to be adjusted without retraining the model.
+
+2. **Dynamic cost matrices.** As interest rates or customer lifetime values change, the optimal threshold shifts. The threshold should be recalculated quarterly from updated cost parameters without touching the underlying model.
+
+3. **Soft interventions in the 0.23–0.50 band.** Customers in this range should not be outright rejected. Lowering their credit limit, offering a balance transfer, or requiring a co-signer minimises the £2,500 false-positive penalty while protecting against the £25,000 default risk.
+
+---
+
+## Skills Demonstrated
+
+- End-to-end tabular ML pipeline (EDA → feature engineering → model training → business output)
+- Cost-sensitive threshold optimisation with asymmetric loss function
+- Bayesian hyperparameter search (Optuna, 30 cross-validated trials)
+- Imbalanced classification with SMOTE strictly inside CV folds (no leakage)
+- SHAP global (beeswarm) and local (waterfall) interpretability
+- Business framing: translating model output into £ financial impact
+- Executive summary PDF auto-generation for non-technical stakeholders
