@@ -16,7 +16,7 @@ By replacing the naive 0.5 probability threshold with a mathematically derived o
 
 The £5.96M figure accounts for every false positive incurred at the lower threshold — the saving is real net of intervention cost.
 
-📄 **[Download Executive Summary PDF](outputs/executive_summary.pdf)** — 1-page briefing written for a non-technical risk committee.
+📄 **[View Executive Summary](outputs/executive_summary.md)** — 1-page briefing written for a non-technical risk committee.
 
 ---
 
