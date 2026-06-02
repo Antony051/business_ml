@@ -33,7 +33,7 @@ pdf.multi_cell(190, 6, text="- Defaults caught: Increased from 741 to 1,281 (+54
 pdf.multi_cell(190, 6, text="- Detection rate: Improved by 72.8 percent.")
 pdf.multi_cell(190, 6, text="- Net financial saving: GBP 5,960,000 compared to the baseline.")
 pdf.ln(2)
-pdf.multi_cell(190, 6, text="The GBP 5.96M figure accounts for every false positive incurred at the lower threshold — the saving is real net of intervention cost.")
+pdf.multi_cell(190, 6, text="The GBP 5.96M figure accounts for every false positive incurred at the lower threshold - the saving is real net of intervention cost.")
 
 pdf.ln(5)
 pdf.set_font("helvetica", 'B', 12)
